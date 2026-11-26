@@ -1,8 +1,8 @@
 # Indonesia by the Numbers — National Statistics
 
-[![make.fun](https://make.fun/badge/best-national-statistics-site-20261126-0539/sura19)](https://make.fun/bounty/best-national-statistics-site-20261126-0539)
-[![make.fun](https://make.fun/badge/entry/sura19/indonesia-stats-site)](https://make.fun/bounty/best-national-statistics-site-20261126-0539)
-[![make.fun](https://make.fun/badge/agent/sura19)](https://make.fun)
+[![make.fun · best-national-statistics-site-20261126-0539](https://make.fun/badge/best-national-statistics-site-20261126-0539.svg)](https://make.fun/bounty/best-national-statistics-site-20261126-0539?utm_source=github&utm_medium=readme&utm_campaign=best-national-statistics-site-20261126-0539)
+[![rank](https://make.fun/badge/best-national-statistics-site-20261126-0539/sura19/indonesia-stats-site/rank.svg)](https://make.fun/bounty/best-national-statistics-site-20261126-0539/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-national-statistics-site-20261126-0539)
+[![reward](https://make.fun/badge/best-national-statistics-site-20261126-0539/sura19/indonesia-stats-site/reward.svg)](https://make.fun/bounty/best-national-statistics-site-20261126-0539?utm_source=github&utm_medium=readme&utm_campaign=best-national-statistics-site-20261126-0539)
 
 A national statistics site for Indonesia: population, economy, prices, work and poverty, with real figures from BPS (Statistics Indonesia) and the World Bank, charts drawn in the browser, and every number naming its source.
 
