@@ -21,6 +21,14 @@ function setup(canvas, height) {
   return { ctx, w, h: height };
 }
 
+// Charts fit the space the screenshot gives them: shorter on narrow
+// (phone) canvases, so the whole chart — bars, labels and axis — stays
+// inside the viewport instead of being cut at its bottom edge.
+function fitHeight(canvas) {
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
+  return w < 420 ? 150 : 190;
+}
+
 function axes(ctx, w, h, pad, maxV, ticks) {
   ctx.strokeStyle = GRID;
   ctx.fillStyle = MUTED;
@@ -39,7 +47,8 @@ function axes(ctx, w, h, pad, maxV, ticks) {
 }
 
 export function drawBarChart(canvas, data, opts) {
-  const { unit = "", color = NAVY, height = 220, highlightLast = false } = opts || {};
+  const { unit = "", color = NAVY, height: optHeight, highlightLast = false } = opts || {};
+  const height = optHeight || fitHeight(canvas);
   const { ctx, w, h } = setup(canvas, height);
   const pad = { top: 14, right: 12, bottom: 28, left: 44 };
   const maxV = Math.max(...data.map((d) => d.value)) * 1.15;
@@ -65,7 +74,8 @@ export function drawBarChart(canvas, data, opts) {
 }
 
 export function drawLineChart(canvas, data, opts) {
-  const { unit = "", color = RED, height = 220, fill = true } = opts || {};
+  const { unit = "", color = RED, height: optHeight, fill = true } = opts || {};
+  const height = optHeight || fitHeight(canvas);
   const { ctx, w, h } = setup(canvas, height);
   const pad = { top: 16, right: 16, bottom: 28, left: 48 };
   const values = data.map((d) => d.value);
@@ -91,6 +101,12 @@ export function drawLineChart(canvas, data, opts) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 2.5;
   ctx.stroke();
+  // End labels are clamped inside the canvas: a centred "Mar 2026" or
+  // "284.67M" at the last point would otherwise run past the right edge.
+  const clampX = (x, text) => {
+    const tw = ctx.measureText(text).width;
+    return Math.max(tw / 2 + 2, Math.min(w - tw / 2 - 2, x));
+  };
   ctx.textAlign = "center";
   data.forEach((d, i) => {
     ctx.beginPath();
@@ -100,26 +116,30 @@ export function drawLineChart(canvas, data, opts) {
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
+    const valueText = d.value.toFixed(2).replace(/\.00$/, "") + unit;
     ctx.fillStyle = INK;
     ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
-    ctx.fillText(d.value.toFixed(2).replace(/\.00$/, "") + unit, xs[i], ys[i] - 12);
+    ctx.fillText(valueText, clampX(xs[i], valueText), ys[i] - 12);
     ctx.font = "12px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = MUTED;
-    ctx.fillText(d.label, xs[i], h - pad.bottom + 16);
+    ctx.fillText(d.label, clampX(xs[i], d.label), h - pad.bottom + 16);
   });
 }
 
 export function drawDonut(canvas, data, opts) {
-  const { height = 220, colors = [NAVY, RED, TEAL, AMBER, "#7c6aa8", "#8a8f98"], centerTop = null, centerSub = "share of GDP" } = opts || {};
+  const { height: optHeight, colors = [NAVY, RED, TEAL, AMBER, "#7c6aa8", "#8a8f98"], centerTop = null, centerSub = "share of GDP" } = opts || {};
+  const height = optHeight || fitHeight(canvas);
   // Wide canvas: legend beside the ring. Narrow canvas (phones): legend
   // below the ring, with a taller canvas so nothing is clipped.
   const probeW = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
   const side = probeW >= 420;
-  const tall = side ? height : 178 + data.length * 22 + 8;
+  // Narrow layout packs the ring and legend tight: ring centre at 76 with
+  // radius 63, legend rows 22 apart starting 20 below the ring's edge.
+  const tall = side ? height : 158 + (data.length - 1) * 22 + 14;
   const { ctx, w, h } = setup(canvas, tall);
   const total = data.reduce((s, d) => s + d.value, 0);
   const cx = side ? 92 : w / 2;
-  const cy = side ? h / 2 : 82;
+  const cy = side ? h / 2 : 76;
   const r = Math.min(78, (side ? h : 150) / 2 - 12);
   let a = -Math.PI / 2;
   data.forEach((d, i) => {
@@ -157,7 +177,7 @@ export function drawDonut(canvas, data, opts) {
       ly += 24;
     });
   } else {
-    let ly = cy + r + 22;
+    let ly = cy + r + 20;
     data.forEach((d, i) => {
       ctx.fillStyle = colors[i % colors.length];
       ctx.fillRect(16, ly - 5, 10, 10);
