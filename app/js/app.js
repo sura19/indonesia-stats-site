@@ -1,7 +1,7 @@
 // Indonesia by the Numbers — views and routing.
 // One hash route per section. Charts are drawn after each render so the
 // canvas always matches the numbers on the page.
-import { ANNUAL, QUARTERLY_GROWTH, SECTORS, INFLATION_MONTHLY, LABOUR, POVERTY, PEOPLE, HEADLINES, SOURCES, annualByYear, formatRpTrillion } from "./data.js";
+import { ANNUAL, QUARTERLY_GROWTH, SECTORS, INFLATION_MONTHLY, LABOUR, POVERTY, PEOPLE, HEADLINES, SOURCES, PROVINCES, PROVINCE_TOTAL_POP, annualByYear, formatRpTrillion } from "./data.js";
 import { drawBarChart, drawLineChart, drawDonut } from "./charts.js";
 
 const root = document.getElementById("view");
@@ -10,6 +10,7 @@ const ROUTES = {
   "": { title: "Overview", render: renderOverview },
   economy: { title: "Economy", render: renderEconomy },
   people: { title: "People", render: renderPeople },
+  provinces: { title: "Provinces", render: renderProvinces },
   prices: { title: "Prices", render: renderPrices },
   work: { title: "Work", render: renderWork },
   poverty: { title: "Poverty", render: renderPoverty },
@@ -67,8 +68,8 @@ function renderOverview() {
         <li><strong>2025</strong> — Population 284.67 million in the SUPAS intercensal survey; 55.65% live on Java. <span class="tag">BPS</span></li>
       </ul>
     </section>`));
-  drawBarChart(document.getElementById("chart-growth"), ANNUAL.map((r) => ({ label: String(r.year), value: r.gdpGrowth })), { unit: "%", highlightLast: true });
-  drawLineChart(document.getElementById("chart-pop"), ANNUAL.map((r) => ({ label: String(r.year), value: r.population })), { unit: "M" });
+  drawBarChart(document.getElementById("chart-growth"), ANNUAL.map((r) => ({ label: String(r.year), value: r.gdpGrowth })), { unit: "%", highlightLast: true, height: 210 });
+  drawLineChart(document.getElementById("chart-pop"), ANNUAL.map((r) => ({ label: String(r.year), value: r.population })), { unit: "M", height: 210 });
   const pick = document.getElementById("year-pick");
   const showYear = () => {
     const r = annualByYear(Number(pick.value));
@@ -167,6 +168,58 @@ function renderPeople() {
     { label: "Java", value: PEOPLE.javaShare },
     { label: "Rest of Indonesia", value: 100 - PEOPLE.javaShare },
   ], { centerTop: "55.65%", centerSub: "live on Java" });
+}
+
+// ---------- Provinces ----------
+let provinceSort = "pop";
+function renderProvinces() {
+  const top10 = [...PROVINCES].sort((a, b) => b.pop - a.pop).slice(0, 10);
+  root.appendChild(el(`
+    ${sectionHead("Provinces", "38 provinces, one country", "Where Indonesians live — and how far each province is from the national poverty rate. Population is mid-2024, poverty is March 2025; every figure below is from a BPS release, with its year. Nothing here is estimated by this site.")}
+    <div class="stat-grid">
+      ${statCard({ label: "Largest province", value: "Jawa Barat", sub: "50.35 million people · 17.88% of Indonesia" })}
+      ${statCard({ label: "Highest poverty", value: "30.03%", sub: "Papua Pegunungan, Mar 2025" })}
+      ${statCard({ label: "Lowest poverty", value: "3.72%", sub: "Bali, Mar 2025" })}
+      ${statCard({ label: "Provinces", value: "38", sub: "281.60 million people, mid-2024" })}
+    </div>
+    <section class="panel">
+      <h2>Compare all 38 provinces <span class="year-pick"><input id="province-filter" type="search" placeholder="Type a province name" aria-label="Filter provinces"></span></h2>
+      <p class="panel-sub">Population mid-2024 · Poverty rate March 2025 · <span id="province-count">38 provinces</span> <span class="year-pick"><button id="province-sort" type="button">Sort: most people</button></span></p>
+      <div class="table-scroll"><table class="data-table"><thead><tr><th>Province</th><th class="num">Pop.</th><th class="num">Share</th><th class="num">Poverty</th></tr></thead>
+      <tbody id="province-rows"></tbody></table></div>
+      ${sourceNote("BPS. Population: Hasil Proyeksi Penduduk Interim 2020–2023 (mid-year, June 2024). Poverty: Susenas, March 2025; national rate 8.47%.")}
+    </section>
+    <section class="panel">
+      <h2>Ten most populous provinces</h2>
+      <p class="panel-sub">Population, millions, mid-2024</p>
+      <canvas id="chart-prov-pop" aria-label="Bar chart of the ten most populous provinces"></canvas>
+      ${sourceNote("BPS, Hasil Proyeksi Penduduk Interim 2020–2023. Labels shortened; full names are in the table.")}
+    </section>`));
+  drawBarChart(document.getElementById("chart-prov-pop"), top10.map((p) => ({ label: p.short, value: p.pop / 1000 })), { unit: "M" });
+  const rowsEl = document.getElementById("province-rows");
+  const countEl = document.getElementById("province-count");
+  const sortBtn = document.getElementById("province-sort");
+  const filterInput = document.getElementById("province-filter");
+  const sorted = () => {
+    const rows = [...PROVINCES];
+    if (provinceSort === "pop") rows.sort((a, b) => b.pop - a.pop);
+    else if (provinceSort === "poverty") rows.sort((a, b) => b.poverty - a.poverty);
+    else rows.sort((a, b) => a.name.localeCompare(b.name));
+    return rows;
+  };
+  const drawRows = () => {
+    const q = filterInput.value.trim().toLowerCase();
+    const rows = sorted().filter((p) => !q || p.name.toLowerCase().includes(q));
+    rowsEl.innerHTML = rows.map((p) => `<tr><td>${p.name}</td><td class="num">${(p.pop / 1000).toFixed(2)}M</td><td class="num">${(p.pop / PROVINCE_TOTAL_POP * 100).toFixed(2)}%</td><td class="num">${p.poverty.toFixed(2)}%</td></tr>`).join("");
+    countEl.textContent = rows.length + " of 38 provinces shown";
+  };
+  sortBtn.addEventListener("click", () => {
+    provinceSort = provinceSort === "pop" ? "poverty" : provinceSort === "poverty" ? "name" : "pop";
+    sortBtn.textContent = provinceSort === "pop" ? "Sort: most people" : provinceSort === "poverty" ? "Sort: highest poverty" : "Sort: A–Z";
+    drawRows();
+  });
+  filterInput.addEventListener("input", drawRows);
+  drawRows();
 }
 
 // ---------- Prices ----------

@@ -29,6 +29,8 @@ function fitHeight(canvas) {
   return w < 420 ? 150 : 190;
 }
 
+// 0-based gridlines for bar charts (bars start at zero); line charts use
+// rangeAxes below, which draws ticks on the same lo..hi scale as the line.
 function axes(ctx, w, h, pad, maxV, ticks) {
   ctx.strokeStyle = GRID;
   ctx.fillStyle = MUTED;
@@ -44,6 +46,39 @@ function axes(ctx, w, h, pad, maxV, ticks) {
     ctx.stroke();
     ctx.fillText(v.toFixed(v < 10 ? 1 : 0), pad.left - 8, y);
   }
+}
+
+// Round tick steps (1, 2, 5 or 10 times a power of ten) inside a range.
+function niceTicks(lo, hi, count) {
+  const span = Math.max(hi - lo, 0.001);
+  const step0 = span / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const norm = step0 / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10) * mag;
+  const ticks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(v);
+  return { ticks, step };
+}
+
+// Gridlines for a line chart, drawn on the same lo..hi scale the line
+// itself is plotted on, so a tick label always matches the line's height.
+function rangeAxes(ctx, w, h, pad, lo, hi) {
+  const { ticks, step } = niceTicks(lo, hi, 4);
+  const decimals = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+  ctx.strokeStyle = GRID;
+  ctx.fillStyle = MUTED;
+  ctx.lineWidth = 1;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  const yOf = (v) => pad.top + (h - pad.top - pad.bottom) * (hi - v) / (hi - lo);
+  ticks.forEach((v) => {
+    const y = yOf(v);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+    ctx.fillText(v.toFixed(decimals), pad.left - 8, y);
+  });
 }
 
 export function drawBarChart(canvas, data, opts) {
@@ -77,14 +112,18 @@ export function drawLineChart(canvas, data, opts) {
   const { unit = "", color = RED, height: optHeight, fill = true } = opts || {};
   const height = optHeight || fitHeight(canvas);
   const { ctx, w, h } = setup(canvas, height);
-  const pad = { top: 16, right: 16, bottom: 28, left: 48 };
+  const pad = { top: 16, right: 16, bottom: 28, left: 54 };
   const values = data.map((d) => d.value);
   const minV = Math.min(...values);
   const maxV = Math.max(...values);
   const span = Math.max(maxV - minV, 0.001);
   const lo = minV - span * 0.25;
   const hi = maxV + span * 0.25;
-  axes(ctx, w, h, pad, hi, 4);
+  // The axis must use the same lo..hi scale as the plotted line: the old
+  // code drew ticks at fractions of hi (0, 72, 144, 216, 288 for a series
+  // running 272–285), which disagreed with the line and crowded the first
+  // point's label. Nice ticks inside [lo, hi] keep both honest.
+  rangeAxes(ctx, w, h, pad, lo, hi);
   const xs = data.map((_, i) => pad.left + ((w - pad.left - pad.right) * i) / (data.length - 1));
   const ys = values.map((v) => pad.top + ((h - pad.top - pad.bottom) * (hi - v)) / (hi - lo));
   if (fill) {
@@ -117,8 +156,11 @@ export function drawLineChart(canvas, data, opts) {
     ctx.lineWidth = 2;
     ctx.stroke();
     const valueText = d.value.toFixed(2).replace(/\.00$/, "") + unit;
-    ctx.fillStyle = INK;
     ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
+    ctx.fillStyle = INK;
+    ctx.strokeStyle = "#fffdf8";
+    ctx.lineWidth = 3;
+    ctx.strokeText(valueText, clampX(xs[i], valueText), ys[i] - 12);
     ctx.fillText(valueText, clampX(xs[i], valueText), ys[i] - 12);
     ctx.font = "12px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = MUTED;
