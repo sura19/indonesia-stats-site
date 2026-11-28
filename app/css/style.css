@@ -119,3 +119,14 @@ body {
   .section-head h1 { font-size: 24px; }
   .lede { font-size: 15px; }
 }
+
+/* Provinces */
+.table-scroll { overflow-x: auto; }
+.data-table th.num, .data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Provinces on phones: keep the comparison table inside the viewport. */
+@media (max-width: 480px) {
+  .table-scroll .data-table { font-size: 13px; table-layout: fixed; width: 100%; }
+  .table-scroll .data-table th, .table-scroll .data-table td { padding: 6px 6px; }
+  .panel-sub .year-pick { float: none; display: inline-block; vertical-align: middle; }
+}
